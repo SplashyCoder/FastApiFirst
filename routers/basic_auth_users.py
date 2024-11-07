@@ -16,31 +16,35 @@ class UserDB(User):
 
 # Base de datos de usuarios de ejemplo
 users_db = {
-    "David": {
+    "splashycoder": {
         "username": "splashycoder",
         "full_name": "David Alejandro Pacheco Mora",
         "email": "davida.pacheco@hotmail.com",
-        "disable": False,
+        "disable": True,
         "password": "1234"
     },
-    "Moncho": {
-        "username": "MonchoLeon",
+    "moncho": {
+        "username": "moncho",
         "full_name": "Simon el gato",
         "email": "simon@hotmail.com",
-        "disable": False,
+        "disable": True,
         "password": "3456"
     },
-    "Oreo": {
-        "username": "OreoTiti",
+    "oreo": {
+        "username": "oreo",
         "full_name": "Oreo la gata",
         "email": "Oreo@hotmail.com",
-        "disable": False,
+        "disable": True,
         "password": "1987"
     }
 }
 
 # Función para buscar un usuario
 def search_user(username: str):
+    if username in users_db:
+        return User(**users_db[username])
+    
+def search_user_db(username: str):
     if username in users_db:
         return UserDB(**users_db[username])
 
@@ -52,6 +56,12 @@ async def get_current_user(token: str = Depends(oauth2)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No autorizado",
             headers={"WWW-Authenticate": "Bearer"}
+        )
+    
+    if user.disable:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="El usuario está desactivado"
         )
     return user
 
@@ -67,7 +77,7 @@ async def login(form: OAuth2PasswordRequestForm = Depends()):
     if not user_db:
         raise HTTPException(status_code=400, detail="El usuario no es correcto")
 
-    user = UserDB(**user_db)
+    user = search_user_db(form.username)
     if not form.password == user.password:
         raise HTTPException(status_code=400, detail="La contraseña no es correcta")
     
