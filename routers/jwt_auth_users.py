@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from pydantic import BaseModel
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import jwt 
+from jose import jwt, JWTError
 from passlib.context import CryptContext 
 from datetime import datetime , timedelta
 
@@ -10,8 +10,9 @@ oauth2 = OAuth2PasswordBearer(tokenUrl="login")
 
 crypt = CryptContext(schemes=['bcrypt'])
 
-ALGORITH = 'H5356'
+ALGORITM = 'HS256'
 ACCESS_TOKEN_DURATION = 1
+SECRET = 'f7a48fb1a9043b9627b48bd4bc49a0c0fe2764af4d6c367ca18272cb2bdde193'
 
 class User(BaseModel):
     username: str
@@ -73,4 +74,47 @@ async def login(form: OAuth2PasswordRequestForm = Depends()):
         "exp" : expired
     }
     
-    return {"access_token": access_token , "token_type": "bearer"}
+    return {"access_token": jwt.encode(access_token,SECRET, algorithm=ALGORITM) , "token_type": "bearer"}
+
+
+def search_user_db(username: str):
+    if username in users_db:
+        return UserDB(**users_db[username])
+
+def search_user(username: str):
+    if username in users_db:
+        return User(**users_db[username])
+
+async def auth_user(token: str):
+    
+    exception = HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No autorizado",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+    
+    try:
+        
+        username = jwt.decode(token,SECRET, algorithms=[ALGORITM]).get('sub')
+        if username is None:
+            raise exception
+        
+    except JWTError:
+        raise search_user(username)
+
+        
+
+async def get_current_user(user: str = Depends(oauth2)):
+    
+    
+    if user.disable:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="El usuario está desactivado"
+        )
+    return user
+
+
+@app.get("/users/me")
+async def me(user: User = Depends(get_current_user)):
+    return user
