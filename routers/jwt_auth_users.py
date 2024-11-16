@@ -29,7 +29,7 @@ users_db = {
         "username": "splashycoder",
         "full_name": "David Alejandro Pacheco Mora",
         "email": "davida.pacheco@hotmail.com",
-        "disable": True,
+        "disable":False,
         "password": "$2a$12$8KiXkIl7AgsUwwBHMNYYieD6Avbb/A7qBqyUYi8GNYKFZQ4J7KJ1S"
     },
     "moncho": {
@@ -85,27 +85,28 @@ def search_user(username: str):
     if username in users_db:
         return User(**users_db[username])
 
-async def auth_user(token: str):
+async def auth_user(token: str = Depends(oauth2)):
     
     exception = HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No autorizado",
+            detail="Credenciales invalidas",
             headers={"WWW-Authenticate": "Bearer"}
         )
     
     try:
         
-        username = jwt.decode(token,SECRET, algorithms=[ALGORITM]).get('sub')
+        username = jwt.decode(token, SECRET, algorithms=[ALGORITM]).get('sub')
         if username is None:
             raise exception
         
     except JWTError:
-        raise search_user(username)
+        raise exception 
+    
+    return search_user(username)
 
         
 
-async def get_current_user(user: str = Depends(oauth2)):
-    
+async def get_current_user(user: User = Depends(auth_user)):
     
     if user.disable:
         raise HTTPException(
