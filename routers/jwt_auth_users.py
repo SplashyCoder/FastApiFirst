@@ -1,11 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
 from pydantic import BaseModel
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 from passlib.context import CryptContext 
 from datetime import datetime , timedelta
 
-app = FastAPI()
+router = APIRouter()
 oauth2 = OAuth2PasswordBearer(tokenUrl="login")
 
 crypt = CryptContext(schemes=['bcrypt'])
@@ -53,14 +53,14 @@ def search_user_db(username: str):
         return UserDB(**users_db[username])
 
 
-@app.get("/")
+@router.get("/usersdb/")
 async def root():
     return users_db
 
-@app.post("/login")
+@router.post("/login")
 async def login(form: OAuth2PasswordRequestForm = Depends()):
     user_db = users_db.get(form.username)  # Aquí corregimos `user_db` a `users_db`
-    if not user_db:
+    if  not user_db:
         raise HTTPException(status_code=400, detail="El usuario no es correcto")
 
     user = search_user_db(form.username)
@@ -116,6 +116,6 @@ async def get_current_user(user: User = Depends(auth_user)):
     return user
 
 
-@app.get("/users/me")
+@router.get("/users/me")
 async def me(user: User = Depends(get_current_user)):
     return user
